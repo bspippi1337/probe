@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<title>NightCafe Video Generator – Single File</title>
+
+<style>
+/* =========================================================
+   VISUAL MINIMUM
+   ========================================================= */
+body {
+  background: #0c0c0c;
+  color: #e5e5e5;
+  font-family: monospace;
+  padding: 20px;
+}
+
+textarea, input, select, button {
+  width: 100%;
+  margin: 6px 0 14px 0;
+  padding: 8px;
+  background: #161616;
+  color: #e5e5e5;
+  border: 1px solid #333;
+}
+
+button {
+  cursor: pointer;
+  background: #222;
+}
+
+pre {
+  background: #050505;
+  padding: 10px;
+  border: 1px solid #333;
+  white-space: pre-wrap;
+}
+</style>
+</head>
+
+<body>
+
+<h2>NightCafe – Unrestricted Video Generator</h2>
+
+<label>API Key</label>
+<input id="apikey" placeholder="Bearer …" />
+
+<label>Prompt</label>
+<textarea id="prompt" rows="5">
+Surreal cinematic video of an ancient god awakening inside a ruined megacity, ultra-detailed, slow camera motion
+</textarea>
+
+<label>Model</label>
+<select id="model">
+  <option value="video-diffusion">video-diffusion</option>
+  <option value="stable-video">stable-video</option>
+</select>
+
+<label>Duration (seconds)</label>
+<input id="duration" type="number" value="4" />
+
+<label>Steps</label>
+<input id="steps" type="number" value="30" />
+
+<label>Seed (0 = random)</label>
+<input id="seed" type="number" value="0" />
+
+<button onclick="generate()">Generate video</button>
+
+<h3>Status / Response</h3>
+<pre id="output"></pre>
+
+<script>
+/* =========================================================
+   MASSIVE C-STYLE COMMENTARY
+   =========================================================
+
+   Dette scriptet:
+   - Sender direkte POST til NightCafe API
+   - Ber om VIDEO (ikke bilde)
+   - Returnerer et JOB-ID
+   - Krever polling for ferdig resultat
+
+   NightCafe svarer IKKE med video direkte.
+   Du får en "task"/"job" som må sjekkes senere.
+
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   MAIN GENERATE FUNCTION
+   --------------------------------------------------------- */
+async function generate() {
+
+  const output = document.getElementById("output");
+  output.textContent = "Sender forespørsel...\n";
+
+  const apiKey = document.getElementById("apikey").value;
+
+  const payload = {
+    type: "video",
+
+    /* PROMPT */
+    prompt: document.getElementById("prompt").value,
+
+    /* MODEL + PARAMS */
+    model: document.getElementById("model").value,
+    steps: Number(document.getElementById("steps").value),
+    duration: Number(document.getElementById("duration").value),
+
+    /* SEED */
+    seed: Number(document.getElementById("seed").value) || null
+  };
+
+  try {
+    const res = await fetch("https://api.nightcafe.studio/api/v1/generate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + apiKey
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    /* -----------------------------------------------------
+       NightCafe returnerer typisk:
+       {
+         id: "job_id",
+         status: "queued"
+       }
+       ----------------------------------------------------- */
+
+    output.textContent = JSON.stringify(data, null, 2);
+
+  } catch (err) {
+    output.textContent = "ERROR:\n" + err.message;
+  }
+}
+</script>
+
+</body>
+</html>

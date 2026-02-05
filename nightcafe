@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<title>NightCafe Video Generator – Presets + NSFW</title>
+
+<style>
+/* =========================================================
+   MINIMAL VISUALS
+   ========================================================= */
+body {
+  background: #0b0b0b;
+  color: #e6e6e6;
+  font-family: monospace;
+  padding: 20px;
+}
+
+textarea, input, select, button {
+  width: 100%;
+  margin: 6px 0 14px 0;
+  padding: 8px;
+  background: #161616;
+  color: #e6e6e6;
+  border: 1px solid #333;
+}
+
+button {
+  background: #222;
+  cursor: pointer;
+}
+
+pre {
+  background: #050505;
+  padding: 10px;
+  border: 1px solid #333;
+  white-space: pre-wrap;
+}
+</style>
+</head>
+
+<body>
+
+<h2>NightCafe – Unrestricted Video Generator</h2>
+
+<label>API key</label>
+<input id="apikey" placeholder="Bearer …" />
+
+<label>Preset</label>
+<select id="preset" onchange="applyPreset()">
+  <option value="">-- manual --</option>
+  <option value="cinematic">Cinematic</option>
+  <option value="dreamlike">Dreamlike</option>
+  <option value="chaotic">Chaotic</option>
+  <option value="nsfw">NSFW preset</option>
+</select>
+
+<label>
+  <input type="checkbox" id="nsfwToggle" onchange="applyPreset()">
+  NSFW mode
+</label>
+
+<label>Prompt</label>
+<textarea id="prompt" rows="5">
+Slow cinematic video of a mysterious figure emerging from shadow, ultra detailed
+</textarea>
+
+<label>Model</label>
+<select id="model">
+  <option value="video-diffusion">video-diffusion</option>
+  <option value="stable-video">stable-video</option>
+</select>
+
+<label>Steps</label>
+<input id="steps" type="number" value="30">
+
+<label>Duration (seconds)</label>
+<input id="duration" type="number" value="4">
+
+<label>Seed (0 = random)</label>
+<input id="seed" type="number" value="0">
+
+<button onclick="generate()">Generate video</button>
+
+<h3>Status / response</h3>
+<pre id="output"></pre>
+
+<script>
+/* =========================================================
+   PRESET + NSFW SYSTEM
+   ========================================================= */
+
+function applyPreset() {
+
+  const preset = document.getElementById("preset").value;
+  const nsfw = document.getElementById("nsfwToggle").checked;
+
+  let steps = 30;
+  let duration = 4;
+  let model = "video-diffusion";
+  let style = "";
+
+  switch (preset) {
+
+    case "cinematic":
+      steps = 36;
+      duration = 5;
+      style =
+        "cinematic lighting, shallow depth of field, slow camera movement";
+      break;
+
+    case "dreamlike":
+      steps = 28;
+      duration = 4;
+      style =
+        "dreamlike atmosphere, soft focus, ethereal motion, surreal textures";
+      break;
+
+    case "chaotic":
+      steps = 42;
+      duration = 3;
+      style =
+        "erratic camera, aggressive motion, abstract transitions, high energy";
+      break;
+
+    case "nsfw":
+      steps = 38;
+      duration = 5;
+      style =
+        "sensual mood, intimate framing, warm tones, slow deliberate motion";
+      break;
+  }
+
+  /* -------------------------------------------------------
+     NSFW EXTRA PIFF
+     -------------------------------------------------------
+     Mer nærhet, mer tekstur, lavere tempo,
+     ingen eksplisitte handlinger
+     ------------------------------------------------------- */
+  if (nsfw) {
+    style +=
+      ", heightened intimacy, tactile realism, lingering camera, provocative aesthetic";
+  }
+
+  document.getElementById("steps").value = steps;
+  document.getElementById("duration").value = duration;
+  document.getElementById("model").value = model;
+
+  const promptField = document.getElementById("prompt");
+  const basePrompt = promptField.value.split(" | style:")[0];
+
+  if (style.trim().length > 0) {
+    promptField.value = basePrompt + " | style: " + style;
+  } else {
+    promptField.value = basePrompt;
+  }
+}
+
+/* =========================================================
+   API CALL
+   ========================================================= */
+
+async function generate() {
+
+  const output = document.getElementById("output");
+  output.textContent = "Sending request...\n";
+
+  const payload = {
+    type: "video",
+    prompt: document.getElementById("prompt").value,
+    model: document.getElementById("model").value,
+    steps: Number(document.getElementById("steps").value),
+    duration: Number(document.getElementById("duration").value),
+    seed: Number(document.getElementById("seed").value) || null
+  };
+
+  try {
+    const res = await fetch(
+      "https://api.nightcafe.studio/api/v1/generate",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization":
+            "Bearer " + document.getElementById("apikey").value
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+    const data = await res.json();
+    output.textContent = JSON.stringify(data, null, 2);
+
+  } catch (err) {
+    output.textContent = "ERROR:\n" + err.message;
+  }
+}
+</script>
+
+</body>
+</html>
