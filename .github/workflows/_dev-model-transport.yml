@@ -1,4 +1,4 @@
-name: Temporary whisper.cpp runtime transport
+name: Temporary speaker embedding model transport
 
 on:
   pull_request:
@@ -9,39 +9,36 @@ permissions:
   contents: read
 
 jobs:
-  runtime:
+  speaker-model:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Build pinned whisper.cpp runtime
+      - name: Download pinned SpeechBrain ECAPA speaker model
         shell: bash
         run: |
           set -Eeuo pipefail
-          git clone --depth 1 --branch v1.7.5 https://github.com/ggml-org/whisper.cpp.git whisper.cpp
-          cmake -S whisper.cpp -B whisper.cpp/build \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DWHISPER_BUILD_EXAMPLES=ON \
-            -DWHISPER_BUILD_TESTS=OFF \
-            -DWHISPER_BUILD_SERVER=OFF \
-            -DGGML_NATIVE=OFF
-          cmake --build whisper.cpp/build --config Release --target whisper-cli -j 2
-          mkdir runtime
-          cp whisper.cpp/build/bin/whisper-cli runtime/
-          find whisper.cpp/build -type f \( -name 'libwhisper.so*' -o -name 'libggml*.so*' \) -exec cp -a {} runtime/ \;
-          chmod 0755 runtime/whisper-cli
-          sha256sum runtime/* > runtime.sha256
-          LD_LIBRARY_PATH="$PWD/runtime" runtime/whisper-cli --help >/dev/null
-          tar --format=posix -cf whisper-cpp-v1.7.5-runtime.tar runtime runtime.sha256
-          sha256sum whisper-cpp-v1.7.5-runtime.tar > runtime-tar.sha256
-          ls -lh runtime
+          api='https://huggingface.co/api/models/speechbrain/spkrec-ecapa-voxceleb'
+          commit="$(curl --fail --silent --show-error "$api" | python3 -c 'import json,sys; print(json.load(sys.stdin)["sha"])')"
+          printf '%s\n' "$commit" > source_commit.txt
+          base="https://huggingface.co/speechbrain/spkrec-ecapa-voxceleb/resolve/$commit"
+          mkdir -p spkrec-ecapa-voxceleb
+          for f in hyperparams.yaml embedding_model.ckpt mean_var_norm_emb.ckpt classifier.ckpt label_encoder.txt; do
+            curl --location --fail --retry 5 --retry-all-errors \
+              --output "spkrec-ecapa-voxceleb/$f" "$base/$f?download=true"
+          done
+          sha256sum spkrec-ecapa-voxceleb/* > model-files.sha256
+          tar --format=posix -cf spkrec-ecapa-voxceleb.tar \
+            spkrec-ecapa-voxceleb model-files.sha256 source_commit.txt
+          sha256sum spkrec-ecapa-voxceleb.tar > full-tar.sha256
+          stat --printf='%n bytes=%s\n' spkrec-ecapa-voxceleb/*
 
-      - name: Upload runtime
+      - name: Upload speaker model
         uses: actions/upload-artifact@v4
         with:
-          name: whisper-cpp-v1.7.5-runtime
+          name: spkrec-ecapa-voxceleb-pinned
           path: |
-            whisper-cpp-v1.7.5-runtime.tar
-            runtime-tar.sha256
+            spkrec-ecapa-voxceleb.tar
+            full-tar.sha256
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
