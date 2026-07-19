@@ -1,4 +1,4 @@
 Temporary transport trigger for verified public Faster-Whisper model.
 Date: 2026-07-19
-Run: 4, pinned Small INT8 transport.
+Run: 5, complete pinned Systran Small model.
 No private recordings or user data are included.
