@@ -1,4 +1,4 @@
-Temporary transport trigger for verified public Norwegian ASR and speaker models.
-Date: 2026-07-19
-Run: 8, pinned NB-Whisper Small Q5 and SpeechBrain ECAPA.
-No private recordings or user data are included.
+Temporary transport trigger for verified public speaker-embedding package.
+Date: 2026-07-20
+Run: 9, Resemblyzer 0.1.4 verified against PyPI SHA-256.
+No recordings, transcripts, or private user data are included.
