@@ -1,3 +1,4 @@
 Temporary transport trigger for verified public Whisper model.
 Date: 2026-07-19
+Run: 2, split artifacts below connector limit.
 No private recordings or user data are included.
