@@ -11,28 +11,36 @@ permissions:
 jobs:
   transport-model:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
-      - name: Download and verify public multilingual Whisper Medium Q5 model
+      - name: Download and verify public Faster-Whisper Large-v3 Turbo INT8 model
         shell: bash
         run: |
           set -Eeuo pipefail
-          curl --location --fail --retry 5 --retry-all-errors \
-            --output ggml-medium-q5_0.bin \
-            'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium-q5_0.bin?download=true'
+          mkdir -p faster-whisper-large-v3-turbo-int8
+          base='https://huggingface.co/Zoont/faster-whisper-large-v3-turbo-int8-ct2/resolve/main'
+          for f in model.bin config.json preprocessor_config.json tokenizer.json vocabulary.json; do
+            curl --location --fail --retry 5 --retry-all-errors \
+              --output "faster-whisper-large-v3-turbo-int8/$f" \
+              "$base/$f?download=true"
+          done
           printf '%s  %s\n' \
-            '19fea4b380c3a618ec4723c3eef2eb785ffba0d0538cf43f8f235e7b3b34220f' \
-            'ggml-medium-q5_0.bin' | sha256sum --check --strict
-          split --bytes=250M --numeric-suffixes=0 --suffix-length=1 \
-            ggml-medium-q5_0.bin ggml-medium-q5_0.part-
-          sha256sum ggml-medium-q5_0.part-* > split-parts.sha256
-          stat --printf='%n bytes=%s\n' ggml-medium-q5_0.part-*
+            '7482f978f9493b93b3d0bf68a148a1a62ca02547e8ee981358ff8ef2de8a9418' \
+            'faster-whisper-large-v3-turbo-int8/model.bin' | sha256sum --check --strict
+          sha256sum faster-whisper-large-v3-turbo-int8/* > model-files.sha256
+          tar --format=posix -cf faster-whisper-large-v3-turbo-int8.tar \
+            faster-whisper-large-v3-turbo-int8 model-files.sha256
+          sha256sum faster-whisper-large-v3-turbo-int8.tar > full-tar.sha256
+          split --bytes=220M --numeric-suffixes=0 --suffix-length=1 \
+            faster-whisper-large-v3-turbo-int8.tar turbo-int8.part-
+          sha256sum turbo-int8.part-* > split-parts.sha256
+          stat --printf='%n bytes=%s\n' turbo-int8.part-*
 
       - name: Upload part 0
         uses: actions/upload-artifact@v4
         with:
-          name: whisper-medium-q5_0-part-0
-          path: ggml-medium-q5_0.part-0
+          name: turbo-int8-part-0
+          path: turbo-int8.part-0
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
@@ -40,19 +48,29 @@ jobs:
       - name: Upload part 1
         uses: actions/upload-artifact@v4
         with:
-          name: whisper-medium-q5_0-part-1
-          path: ggml-medium-q5_0.part-1
+          name: turbo-int8-part-1
+          path: turbo-int8.part-1
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
 
-      - name: Upload part 2 and manifest
+      - name: Upload part 2
         uses: actions/upload-artifact@v4
         with:
-          name: whisper-medium-q5_0-part-2-manifest
+          name: turbo-int8-part-2
+          path: turbo-int8.part-2
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload part 3 and manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: turbo-int8-part-3-manifests
           path: |
-            ggml-medium-q5_0.part-2
+            turbo-int8.part-3
             split-parts.sha256
+            full-tar.sha256
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
