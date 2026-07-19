@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Download public multilingual Whisper Medium Q5 model
+      - name: Download and verify public multilingual Whisper Medium Q5 model
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -23,13 +23,36 @@ jobs:
           printf '%s  %s\n' \
             '19fea4b380c3a618ec4723c3eef2eb785ffba0d0538cf43f8f235e7b3b34220f' \
             'ggml-medium-q5_0.bin' | sha256sum --check --strict
-          stat --printf='bytes=%s\n' ggml-medium-q5_0.bin
+          split --bytes=250M --numeric-suffixes=0 --suffix-length=1 \
+            ggml-medium-q5_0.bin ggml-medium-q5_0.part-
+          sha256sum ggml-medium-q5_0.part-* > split-parts.sha256
+          stat --printf='%n bytes=%s\n' ggml-medium-q5_0.part-*
 
-      - name: Upload verified model artifact
+      - name: Upload part 0
         uses: actions/upload-artifact@v4
         with:
-          name: whisper-medium-q5_0
-          path: ggml-medium-q5_0.bin
+          name: whisper-medium-q5_0-part-0
+          path: ggml-medium-q5_0.part-0
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload part 1
+        uses: actions/upload-artifact@v4
+        with:
+          name: whisper-medium-q5_0-part-1
+          path: ggml-medium-q5_0.part-1
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload part 2 and manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: whisper-medium-q5_0-part-2-manifest
+          path: |
+            ggml-medium-q5_0.part-2
+            split-parts.sha256
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
