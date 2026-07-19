@@ -1,0 +1,39 @@
+name: Diarization model transport
+
+on:
+  pull_request:
+    paths:
+      - '_dev/trigger-diarization.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download official sherpa-onnx diarization models
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          curl -L --fail --retry 5 --retry-delay 3 \
+            'https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2' \
+            -o out/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2
+          curl -L --fail --retry 5 --retry-delay 3 \
+            'https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/nemo_en_titanet_small.onnx' \
+            -o out/nemo_en_titanet_small.onnx
+          tar -xjf out/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2 -C out
+          sha256sum out/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2 out/nemo_en_titanet_small.onnx \
+            out/sherpa-onnx-pyannote-segmentation-3-0/model.onnx \
+            out/sherpa-onnx-pyannote-segmentation-3-0/model.int8.onnx > out/SHA256SUMS.txt
+          printf 'Sources:\nhttps://github.com/k2-fsa/sherpa-onnx/releases/tag/speaker-segmentation-models\nhttps://github.com/k2-fsa/sherpa-onnx/releases/tag/speaker-recongition-models\n' > out/SOURCE.txt
+
+      - name: Upload diarization models
+        uses: actions/upload-artifact@v4
+        with:
+          name: sherpa-onnx-diarization-models
+          path: out
+          compression-level: 6
+          retention-days: 1
