@@ -20,11 +20,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p out/model
+          mkdir -p out/model-standard
           URL='https://huggingface.co/ggerganov/whisper.cpp/resolve/c521a4b02f422512d734391fdf08bb08c0862f68/ggml-small-q5_1.bin?download=true'
-          curl -L --fail --retry 5 --retry-delay 3 "$URL" -o out/model/ggml-small-q5_1.bin
-          echo 'ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb  out/model/ggml-small-q5_1.bin' | sha256sum -c -
-          sha256sum out/model/ggml-small-q5_1.bin > out/model/SHA256SUMS.txt
+          curl -L --fail --retry 5 --retry-delay 3 "$URL" -o out/model-standard/ggml-small-q5_1.bin
+          echo 'ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb  out/model-standard/ggml-small-q5_1.bin' | sha256sum -c -
+          sha256sum out/model-standard/ggml-small-q5_1.bin > out/model-standard/SHA256SUMS.txt
+
+      - name: Download and verify Norwegian NB-Whisper Small Q5_0
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/model-nb
+          URL='https://huggingface.co/NbAiLabBeta/nb-whisper-small/resolve/5914f348ea2c3ba58b97f28fc925e2df1ff78ee1/ggml-model-q5_0.bin?download=true'
+          curl -L --fail --retry 5 --retry-delay 3 "$URL" -o out/model-nb/nb-whisper-small-q5_0.bin
+          echo '2a9025afb6e825fc4ae6a46671e0cb2f43e62f1dec87270deea6fe61b5285a20  out/model-nb/nb-whisper-small-q5_0.bin' | sha256sum -c -
+          sha256sum out/model-nb/nb-whisper-small-q5_0.bin > out/model-nb/SHA256SUMS.txt
+          printf 'Repository: NbAiLabBeta/nb-whisper-small\nRevision: 5914f348ea2c3ba58b97f28fc925e2df1ff78ee1\nLicense: Apache-2.0\n' > out/model-nb/SOURCE.txt
 
       - name: Build pinned whisper.cpp runtime
         shell: bash
@@ -41,11 +52,19 @@ jobs:
           printf 'whisper.cpp tag: v1.8.6\n' > out/runtime/VERSION.txt
           sha256sum out/runtime/* > out/runtime/SHA256SUMS.txt
 
-      - name: Upload model
+      - name: Upload standard model
         uses: actions/upload-artifact@v4
         with:
           name: whisper-small-q5_1-model
-          path: out/model
+          path: out/model-standard
+          compression-level: 0
+          retention-days: 1
+
+      - name: Upload Norwegian model
+        uses: actions/upload-artifact@v4
+        with:
+          name: nb-whisper-small-q5_0-model
+          path: out/model-nb
           compression-level: 0
           retention-days: 1
 
