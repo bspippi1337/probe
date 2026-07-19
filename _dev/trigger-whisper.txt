@@ -1,0 +1,2 @@
+Trigger public Whisper model and runtime packaging for local audio analysis.
+No user audio is uploaded.
