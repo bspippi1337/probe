@@ -1,4 +1,4 @@
-Temporary transport trigger for verified public Faster-Whisper model.
+Temporary transport trigger for verified public Norwegian ASR model.
 Date: 2026-07-19
-Run: 5, complete pinned Systran Small model.
+Run: 6, pinned NB-Whisper Large Q5 and whisper.cpp CLI.
 No private recordings or user data are included.
