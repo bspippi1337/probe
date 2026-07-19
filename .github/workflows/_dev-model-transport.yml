@@ -1,4 +1,4 @@
-name: Temporary Whisper model transport
+name: Temporary Norwegian ASR transport
 
 on:
   pull_request:
@@ -11,32 +11,86 @@ permissions:
 jobs:
   transport-model:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
-      - name: Download pinned complete Systran Faster-Whisper Small model
+      - name: Build pinned whisper.cpp CLI
         shell: bash
         run: |
           set -Eeuo pipefail
-          ref='536b066'
-          base="https://huggingface.co/Systran/faster-whisper-small/resolve/$ref"
-          mkdir -p faster-whisper-small-complete
-          for f in model.bin config.json tokenizer.json vocabulary.txt; do
-            curl --location --fail --retry 5 --retry-all-errors \
-              --output "faster-whisper-small-complete/$f" "$base/$f?download=true"
-          done
-          sha256sum faster-whisper-small-complete/* > model-files.sha256
-          tar --format=posix -cf faster-whisper-small-complete.tar \
-            faster-whisper-small-complete model-files.sha256
-          sha256sum faster-whisper-small-complete.tar > full-tar.sha256
-          stat --printf='%n bytes=%s\n' faster-whisper-small-complete/*
+          git clone --depth 1 --branch v1.7.5 https://github.com/ggml-org/whisper.cpp.git whisper.cpp
+          cmake -S whisper.cpp -B whisper.cpp/build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DWHISPER_BUILD_EXAMPLES=ON \
+            -DWHISPER_BUILD_TESTS=OFF \
+            -DWHISPER_BUILD_SERVER=OFF \
+            -DGGML_NATIVE=OFF
+          cmake --build whisper.cpp/build --config Release --target whisper-cli -j 2
+          cp whisper.cpp/build/bin/whisper-cli ./whisper-cli
+          chmod 0755 whisper-cli
+          sha256sum whisper-cli > whisper-cli.sha256
+          ./whisper-cli --help >/dev/null
 
-      - name: Upload complete model and manifests
+      - name: Download pinned NB-Whisper Large Q5 model
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ref='8c6249f'
+          url="https://huggingface.co/NbAiLab/nb-whisper-large/resolve/$ref/ggml-model-q5_0.bin?download=true"
+          curl --location --fail --retry 5 --retry-all-errors \
+            --output nb-whisper-large-q5_0.bin "$url"
+          sha256sum nb-whisper-large-q5_0.bin > nb-whisper-large-q5_0.sha256
+          split --bytes=220M --numeric-suffixes=0 --suffix-length=1 \
+            nb-whisper-large-q5_0.bin nb-whisper-q5.part-
+          sha256sum nb-whisper-q5.part-* > split-parts.sha256
+          stat --printf='%n bytes=%s\n' nb-whisper-q5.part-*
+
+      - name: Upload CLI and part 0
         uses: actions/upload-artifact@v4
         with:
-          name: faster-whisper-small-complete-pinned
+          name: nb-whisper-cli-part-0
           path: |
-            faster-whisper-small-complete.tar
-            full-tar.sha256
+            whisper-cli
+            whisper-cli.sha256
+            nb-whisper-q5.part-0
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload part 1
+        uses: actions/upload-artifact@v4
+        with:
+          name: nb-whisper-part-1
+          path: nb-whisper-q5.part-1
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload part 2
+        uses: actions/upload-artifact@v4
+        with:
+          name: nb-whisper-part-2
+          path: nb-whisper-q5.part-2
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload part 3
+        uses: actions/upload-artifact@v4
+        with:
+          name: nb-whisper-part-3
+          path: nb-whisper-q5.part-3
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload final part and manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: nb-whisper-final-manifests
+          path: |
+            nb-whisper-q5.part-4
+            nb-whisper-large-q5_0.sha256
+            split-parts.sha256
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
