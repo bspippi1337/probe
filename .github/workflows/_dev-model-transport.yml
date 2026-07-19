@@ -11,65 +11,31 @@ permissions:
 jobs:
   transport-model:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 20
     steps:
-      - name: Download and verify public Faster-Whisper Large-v3 Turbo INT8 model
+      - name: Download pinned public Faster-Whisper Small INT8 model
         shell: bash
         run: |
           set -Eeuo pipefail
-          mkdir -p faster-whisper-large-v3-turbo-int8
-          base='https://huggingface.co/Zoont/faster-whisper-large-v3-turbo-int8-ct2/resolve/main'
-          for f in model.bin config.json preprocessor_config.json tokenizer.json vocabulary.json; do
+          commit='a94e151d8147ce851767640f24b3e854cf60def7'
+          base="https://huggingface.co/rhasspy/faster-whisper-small-int8/resolve/$commit"
+          mkdir -p faster-whisper-small-int8
+          for f in model.bin config.json vocabulary.txt; do
             curl --location --fail --retry 5 --retry-all-errors \
-              --output "faster-whisper-large-v3-turbo-int8/$f" \
-              "$base/$f?download=true"
+              --output "faster-whisper-small-int8/$f" "$base/$f?download=true"
           done
-          printf '%s  %s\n' \
-            '7482f978f9493b93b3d0bf68a148a1a62ca02547e8ee981358ff8ef2de8a9418' \
-            'faster-whisper-large-v3-turbo-int8/model.bin' | sha256sum --check --strict
-          sha256sum faster-whisper-large-v3-turbo-int8/* > model-files.sha256
-          tar --format=posix -cf faster-whisper-large-v3-turbo-int8.tar \
-            faster-whisper-large-v3-turbo-int8 model-files.sha256
-          sha256sum faster-whisper-large-v3-turbo-int8.tar > full-tar.sha256
-          split --bytes=220M --numeric-suffixes=0 --suffix-length=1 \
-            faster-whisper-large-v3-turbo-int8.tar turbo-int8.part-
-          sha256sum turbo-int8.part-* > split-parts.sha256
-          stat --printf='%n bytes=%s\n' turbo-int8.part-*
+          sha256sum faster-whisper-small-int8/* > model-files.sha256
+          tar --format=posix -cf faster-whisper-small-int8.tar \
+            faster-whisper-small-int8 model-files.sha256
+          sha256sum faster-whisper-small-int8.tar > full-tar.sha256
+          stat --printf='%n bytes=%s\n' faster-whisper-small-int8/*
 
-      - name: Upload part 0
+      - name: Upload verified model and manifests
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-int8-part-0
-          path: turbo-int8.part-0
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload part 1
-        uses: actions/upload-artifact@v4
-        with:
-          name: turbo-int8-part-1
-          path: turbo-int8.part-1
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload part 2
-        uses: actions/upload-artifact@v4
-        with:
-          name: turbo-int8-part-2
-          path: turbo-int8.part-2
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload part 3 and manifests
-        uses: actions/upload-artifact@v4
-        with:
-          name: turbo-int8-part-3-manifests
+          name: faster-whisper-small-int8-pinned
           path: |
-            turbo-int8.part-3
-            split-parts.sha256
+            faster-whisper-small-int8.tar
             full-tar.sha256
           compression-level: 0
           retention-days: 1
