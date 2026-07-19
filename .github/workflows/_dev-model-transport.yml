@@ -1,4 +1,4 @@
-name: Temporary Norwegian ASR and speaker model transport
+name: Temporary Resemblyzer transport
 
 on:
   pull_request:
@@ -9,59 +9,29 @@ permissions:
   contents: read
 
 jobs:
-  models:
+  transport:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
-      - name: Download pinned NB-Whisper Small Q5
+      - name: Download and verify Resemblyzer 0.1.4
         shell: bash
         run: |
           set -Eeuo pipefail
-          api='https://huggingface.co/api/models/NbAiLab/nb-whisper-small'
-          commit="$(curl --fail --silent --show-error "$api" | python3 -c 'import json,sys; print(json.load(sys.stdin)["sha"])')"
-          printf '%s\n' "$commit" > nb-small-source-commit.txt
+          url='https://files.pythonhosted.org/packages/d9/b5/d897d5de5b2123a1ad5d32e8e007d83f76582f5c32c60992577263bd7c7e/Resemblyzer-0.1.4-py3-none-any.whl'
           curl --location --fail --retry 5 --retry-all-errors \
-            --output nb-whisper-small-q5_0.bin \
-            "https://huggingface.co/NbAiLab/nb-whisper-small/resolve/$commit/ggml-model-q5_0.bin?download=true"
-          sha256sum nb-whisper-small-q5_0.bin > nb-small.sha256
+            --output Resemblyzer-0.1.4-py3-none-any.whl "$url"
+          printf '%s  %s\n' \
+            '8f12eb2f1a9982d32e8db7856de754709b59c93a77bcf0ff536584b619a9dd1f' \
+            'Resemblyzer-0.1.4-py3-none-any.whl' | sha256sum --check --strict
+          sha256sum Resemblyzer-0.1.4-py3-none-any.whl > Resemblyzer-0.1.4.sha256
 
-      - name: Download pinned SpeechBrain ECAPA speaker model
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          api='https://huggingface.co/api/models/speechbrain/spkrec-ecapa-voxceleb'
-          commit="$(curl --fail --silent --show-error "$api" | python3 -c 'import json,sys; print(json.load(sys.stdin)["sha"])')"
-          printf '%s\n' "$commit" > ecapa-source-commit.txt
-          base="https://huggingface.co/speechbrain/spkrec-ecapa-voxceleb/resolve/$commit"
-          mkdir -p spkrec-ecapa-voxceleb
-          for f in hyperparams.yaml embedding_model.ckpt mean_var_norm_emb.ckpt classifier.ckpt label_encoder.txt; do
-            curl --location --fail --retry 5 --retry-all-errors \
-              --output "spkrec-ecapa-voxceleb/$f" "$base/$f?download=true"
-          done
-          sha256sum spkrec-ecapa-voxceleb/* > ecapa-files.sha256
-          tar --format=posix -cf spkrec-ecapa-voxceleb.tar \
-            spkrec-ecapa-voxceleb ecapa-files.sha256 ecapa-source-commit.txt
-          sha256sum spkrec-ecapa-voxceleb.tar > ecapa-tar.sha256
-
-      - name: Upload NB-Whisper Small
+      - name: Upload verified wheel
         uses: actions/upload-artifact@v4
         with:
-          name: nb-whisper-small-q5-pinned
+          name: resemblyzer-0.1.4-verified
           path: |
-            nb-whisper-small-q5_0.bin
-            nb-small.sha256
-            nb-small-source-commit.txt
-          compression-level: 0
-          retention-days: 1
-          if-no-files-found: error
-
-      - name: Upload ECAPA speaker model
-        uses: actions/upload-artifact@v4
-        with:
-          name: spkrec-ecapa-voxceleb-pinned
-          path: |
-            spkrec-ecapa-voxceleb.tar
-            ecapa-tar.sha256
+            Resemblyzer-0.1.4-py3-none-any.whl
+            Resemblyzer-0.1.4.sha256
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
