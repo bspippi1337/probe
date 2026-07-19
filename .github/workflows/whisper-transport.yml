@@ -1,0 +1,55 @@
+name: Whisper transport
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/whisper-transport.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download and verify multilingual Whisper Small Q5_1
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/model
+          URL='https://huggingface.co/ggerganov/whisper.cpp/resolve/c521a4b02f422512d734391fdf08bb08c0862f68/ggml-small-q5_1.bin?download=true'
+          curl -L --fail --retry 5 --retry-delay 3 "$URL" -o out/model/ggml-small-q5_1.bin
+          echo 'ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb  out/model/ggml-small-q5_1.bin' | sha256sum -c -
+          sha256sum out/model/ggml-small-q5_1.bin > out/model/SHA256SUMS.txt
+
+      - name: Build pinned whisper.cpp runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake build-essential
+          git clone --depth 1 --branch v1.8.6 https://github.com/ggml-org/whisper.cpp.git src
+          cmake -S src -B src/build -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_EXAMPLES=ON -DGGML_NATIVE=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build src/build --config Release -j2
+          mkdir -p out/runtime
+          cp src/build/bin/whisper-cli out/runtime/
+          find src/build -type f \( -name 'libwhisper.so*' -o -name 'libggml*.so*' \) -exec cp -P {} out/runtime/ \;
+          printf 'whisper.cpp tag: v1.8.6\n' > out/runtime/VERSION.txt
+          sha256sum out/runtime/* > out/runtime/SHA256SUMS.txt
+
+      - name: Upload model
+        uses: actions/upload-artifact@v4
+        with:
+          name: whisper-small-q5_1-model
+          path: out/model
+          compression-level: 0
+          retention-days: 1
+
+      - name: Upload runtime
+        uses: actions/upload-artifact@v4
+        with:
+          name: whisper-cpp-linux-runtime
+          path: out/runtime
+          compression-level: 6
+          retention-days: 1
