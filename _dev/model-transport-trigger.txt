@@ -1,4 +1,4 @@
-Temporary transport trigger for verified public whisper.cpp runtime.
+Temporary transport trigger for verified public Norwegian ASR and speaker models.
 Date: 2026-07-19
-Run: 7, complete v1.7.5 runtime libraries.
+Run: 8, pinned NB-Whisper Small Q5 and SpeechBrain ECAPA.
 No private recordings or user data are included.
