@@ -1,2 +1,3 @@
-Trigger public Whisper model and runtime packaging for local audio analysis.
+Trigger public Whisper models and runtime packaging for local audio analysis.
+Includes Norwegian NB-Whisper Small Q5_0.
 No user audio is uploaded.
