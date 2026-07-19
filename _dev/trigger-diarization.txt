@@ -1,0 +1,2 @@
+Trigger official sherpa-onnx diarization model packaging.
+No user audio is uploaded.
