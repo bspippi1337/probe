@@ -1,4 +1,4 @@
 Temporary transport trigger for verified public Faster-Whisper model.
 Date: 2026-07-19
-Run: 3, Large-v3 Turbo INT8 split transport.
+Run: 4, pinned Small INT8 transport.
 No private recordings or user data are included.
