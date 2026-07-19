@@ -1,4 +1,4 @@
-Temporary transport trigger for verified public Norwegian ASR model.
+Temporary transport trigger for verified public whisper.cpp runtime.
 Date: 2026-07-19
-Run: 6, pinned NB-Whisper Large Q5 and whisper.cpp CLI.
+Run: 7, complete v1.7.5 runtime libraries.
 No private recordings or user data are included.
