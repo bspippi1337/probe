@@ -1,4 +1,4 @@
-Temporary transport trigger for verified public Whisper model.
+Temporary transport trigger for verified public Faster-Whisper model.
 Date: 2026-07-19
-Run: 2, split artifacts below connector limit.
+Run: 3, Large-v3 Turbo INT8 split transport.
 No private recordings or user data are included.
