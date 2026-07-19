@@ -1,4 +1,4 @@
-name: Temporary speaker embedding model transport
+name: Temporary Norwegian ASR and speaker model transport
 
 on:
   pull_request:
@@ -9,36 +9,59 @@ permissions:
   contents: read
 
 jobs:
-  speaker-model:
+  models:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
+      - name: Download pinned NB-Whisper Small Q5
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          api='https://huggingface.co/api/models/NbAiLab/nb-whisper-small'
+          commit="$(curl --fail --silent --show-error "$api" | python3 -c 'import json,sys; print(json.load(sys.stdin)["sha"])')"
+          printf '%s\n' "$commit" > nb-small-source-commit.txt
+          curl --location --fail --retry 5 --retry-all-errors \
+            --output nb-whisper-small-q5_0.bin \
+            "https://huggingface.co/NbAiLab/nb-whisper-small/resolve/$commit/ggml-model-q5_0.bin?download=true"
+          sha256sum nb-whisper-small-q5_0.bin > nb-small.sha256
+
       - name: Download pinned SpeechBrain ECAPA speaker model
         shell: bash
         run: |
           set -Eeuo pipefail
           api='https://huggingface.co/api/models/speechbrain/spkrec-ecapa-voxceleb'
           commit="$(curl --fail --silent --show-error "$api" | python3 -c 'import json,sys; print(json.load(sys.stdin)["sha"])')"
-          printf '%s\n' "$commit" > source_commit.txt
+          printf '%s\n' "$commit" > ecapa-source-commit.txt
           base="https://huggingface.co/speechbrain/spkrec-ecapa-voxceleb/resolve/$commit"
           mkdir -p spkrec-ecapa-voxceleb
           for f in hyperparams.yaml embedding_model.ckpt mean_var_norm_emb.ckpt classifier.ckpt label_encoder.txt; do
             curl --location --fail --retry 5 --retry-all-errors \
               --output "spkrec-ecapa-voxceleb/$f" "$base/$f?download=true"
           done
-          sha256sum spkrec-ecapa-voxceleb/* > model-files.sha256
+          sha256sum spkrec-ecapa-voxceleb/* > ecapa-files.sha256
           tar --format=posix -cf spkrec-ecapa-voxceleb.tar \
-            spkrec-ecapa-voxceleb model-files.sha256 source_commit.txt
-          sha256sum spkrec-ecapa-voxceleb.tar > full-tar.sha256
-          stat --printf='%n bytes=%s\n' spkrec-ecapa-voxceleb/*
+            spkrec-ecapa-voxceleb ecapa-files.sha256 ecapa-source-commit.txt
+          sha256sum spkrec-ecapa-voxceleb.tar > ecapa-tar.sha256
 
-      - name: Upload speaker model
+      - name: Upload NB-Whisper Small
+        uses: actions/upload-artifact@v4
+        with:
+          name: nb-whisper-small-q5-pinned
+          path: |
+            nb-whisper-small-q5_0.bin
+            nb-small.sha256
+            nb-small-source-commit.txt
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload ECAPA speaker model
         uses: actions/upload-artifact@v4
         with:
           name: spkrec-ecapa-voxceleb-pinned
           path: |
             spkrec-ecapa-voxceleb.tar
-            full-tar.sha256
+            ecapa-tar.sha256
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
