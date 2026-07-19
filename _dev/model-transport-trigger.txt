@@ -1,0 +1,4 @@
+Temporary transport trigger for verified public speaker-embedding package.
+Date: 2026-07-20
+Run: 9, Resemblyzer 0.1.4 verified against PyPI SHA-256.
+No recordings, transcripts, or private user data are included.
