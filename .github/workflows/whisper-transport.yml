@@ -4,6 +4,9 @@ on:
   push:
     paths:
       - '.github/workflows/whisper-transport.yml'
+  pull_request:
+    paths:
+      - '_dev/trigger-whisper.txt'
   workflow_dispatch:
 
 permissions:
